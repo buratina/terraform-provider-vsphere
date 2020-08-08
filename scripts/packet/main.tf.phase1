@@ -107,7 +107,7 @@ data "packet_precreated_ip_block" "public" {
   public           = true
 }
 
-resource "local_file" "vcsa_template" {
+resource "local_file" "vcsa_template1" {
   content = templatefile("${path.cwd}/vcsa_deploy.json", {
     hostname       = packet_device.esxi1.network.0.address
     password       = packet_device.esxi1.root_password
