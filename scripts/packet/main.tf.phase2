@@ -166,11 +166,13 @@ resource "vsphere_license" "license" {
 }
 
 data "vsphere_host_thumbprint" "esxi1" {  
-  address = packet_device.esxi1.network.0.address
+  address  = packet_device.esxi1.network.0.address
+  insecure = true
 }  
 
 data "vsphere_host_thumbprint" "esxi2" {  
-  address = packet_device.esxi2.network.0.address
+  address  = packet_device.esxi2.network.0.address
+  insecure = true
 }  
 
 resource "vsphere_compute_cluster" "compute_cluster" {
