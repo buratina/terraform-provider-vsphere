@@ -113,6 +113,11 @@ data "packet_precreated_ip_block" "public" {
   public           = true
 }
 
+data "vsphere_network" "vmnet" {
+  datacenter_id = vsphere_datacenter.dc.moid
+  name          = "VM Network"
+}
+
 resource "vsphere_resource_pool" "pool" {
   name                    = var.VSPHERE_RESOURCE_POOL
   parent_resource_pool_id = vsphere_compute_cluster.compute_cluster.resource_pool_id
@@ -199,3 +204,68 @@ resource "vsphere_host" "host2" {
   cluster    = vsphere_compute_cluster.compute_cluster.id
   thumbprint = data.vsphere_host_thumbprint.esxi2.id
 }
+
+resource "vsphere_virtual_machine" "template" {
+  name             = var.VSPHERE_TEMPLATE
+  resource_pool_id = vsphere_compute_cluster.compute_cluster.resource_pool_id
+  datastore_id     = vsphere_nas_datastore.ds.id
+  datacenter_id    = vsphere_datacenter.dc.moid
+  host_system_id   = vsphere_host.host2.id
+
+  wait_for_guest_net_timeout = -1
+
+  num_cpus = 2
+  memory   = 2048
+  guest_id = "other3xLinux64Guest"
+
+  network_interface {
+    network_id = vsphere_distributed_port_group.pg.id
+  }
+
+  ovf_deploy {
+    remote_ovf_url = "https://acctest-images.storage.googleapis.com/tfvsphere_template.ovf"
+    ovf_network_map = {
+      "terraform-test-pg" = vsphere_distributed_port_group.pg.id
+    }
+  }
+  disk {
+    label = "disk0"
+    size  = 20
+  }
+
+  cdrom {
+    client_device = true
+  }
+}
+
+resource "vsphere_virtual_machine" "pxe" {
+  name             = "pxe-server"
+  resource_pool_id = vsphere_compute_cluster.compute_cluster.resource_pool_id
+  datastore_id     = vsphere_nas_datastore.ds.id
+
+  wait_for_guest_net_timeout = -1
+
+  num_cpus = 2
+  memory   = 2048
+  guest_id = "ubuntu64Guest"
+
+  network_interface {
+    network_id = data.vsphere_network.vmnet.id
+  }
+  network_interface {
+    network_id = vsphere_distributed_port_group.pg.id
+  }
+  clone {
+    template_uuid = vsphere_virtual_machine.template.id
+  }
+
+  disk {
+    label = "disk0"
+    size  = 20
+  }
+
+  cdrom {
+    client_device = true
+  }
+}
+
